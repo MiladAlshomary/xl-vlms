@@ -7,6 +7,7 @@ from nltk.corpus import words
 
 import helpers.utils as helpers_utils
 from metrics.utils import GIST_FILE_PATH, get_stopwords, valid_word
+from models.constants import PAINTING_STYLES_DICT
 
 __all__ = [
     "get_multimodal_grounding",
@@ -25,9 +26,11 @@ def concept_text_grounding(
     gist_file_path: str = GIST_FILE_PATH,
     pre_num_top_tokens: int = 50,
     keep_unique_words: bool = False,
+    predefined_phrases: list = [],
 ) -> List[List[str]]:
     # components are of shape n_comp x feature_dim
     eng_corpus = words.words()
+
     stopwords = get_stopwords(gist_file_path=gist_file_path)
     num_concepts = concepts.shape[0]
 
@@ -38,9 +41,15 @@ def concept_text_grounding(
     top_token_idx = token_logits.argsort(dim=-1, descending=True)[
         :, :pre_num_top_tokens
     ]
+
+    # if len(predefined_phrases) > 0:
+    #     allowed_tokens = [token for phrase in predefined_phrases for token in tokenizer.encode(phrase, add_special_tokens=False)]
+
     grounded_words_list = []
     for k in range(num_concepts):
-        comp_words = tokenizer.batch_decode(top_token_idx[k], skip_special_tokens=True)
+        top_tokens = top_token_idx[k]
+        #top_tokens = [t for t in top_tokens if t in allowed_tokens]
+        comp_words = tokenizer.batch_decode(top_tokens, skip_special_tokens=True)
         comp_words = [
             word.lower().strip()
             for word in comp_words
@@ -107,6 +116,7 @@ def get_multimodal_grounding(
             tokenizer=tokenizer,
             num_top_tokens=num_grounded_text_tokens,
             pre_num_top_tokens=args.pre_num_top_tokens,
+            predefined_phrases=PAINTING_STYLES_DICT[args.token_of_interest]['predefined_keywords']
         )
         if logger is not None:
             for i in range(len(grounded_words)):

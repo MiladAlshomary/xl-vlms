@@ -368,6 +368,10 @@ def save_hidden_states_to_file(
             ), f"{data_key} not found in data, there is only: {data.keys()}"
 
             saved_data[data_key] = data[data_key]  # List[Any]
+
+    if not os.path.exists(os.path.join(args.save_dir, "features")):
+        os.makedirs(os.path.join(args.save_dir, "features"))
+
     file_name = os.path.join(
         args.save_dir, "features", f"{hook_name}_{args.save_filename}.pth"
     )
@@ -531,9 +535,9 @@ def hooks_postprocessing(
     hook_postprocessing_function = None
     if "save_hidden_states" in hook_name:
 
-        data_keys = ["hidden_states", "image"]
+        data_keys = ["hidden_states", "image", "gt_label"]
         # temp change
-        data_keys = ["hidden_states", "image", "model_predictions"]
+        data_keys = ["hidden_states", "image", "model_predictions", "gt_label"]
 
         if "token_of_interest" in hook_name:
             data_keys.append("token_of_interest_mask")

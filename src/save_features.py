@@ -14,6 +14,7 @@ from helpers.utils import (clear_forward_hooks, clear_hooks_variables,
 from models import get_model_class
 from models.image_text_model import ImageTextModel
 
+import tqdm
 
 @torch.no_grad()
 def inference(
@@ -54,6 +55,7 @@ def inference(
             else inputs["input_ids"].shape[0]
         )
         item["model_generated_output"] = out[:, input_len:]
+        item["gt_label"] = item['targets']
         item["model_predictions"] = model_class.get_tokenizer().batch_decode(
             out[:, input_len:], skip_special_tokens=True
         )
@@ -62,6 +64,7 @@ def inference(
             for func in hook_return_functions:
                 if func is not None:
                     hook_output = func(**item)
+                    #print(hook_output)
                     if hook_output:
                         item.update(hook_output)
 

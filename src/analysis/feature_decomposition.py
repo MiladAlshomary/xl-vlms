@@ -38,7 +38,9 @@ def decompose_and_ground_activations(
     )
     results_dict["concepts"] = concepts
     results_dict["activations"] = activations
+    results_dict["image_to_info"] = {x[0][0]: {'label': x[1][0], 'pred': x[2][0]} for x in zip(metadata['image'], metadata['gt_label'], metadata['model_predictions'])}
     results_dict["decomposition_method"] = args.decomposition_method
+    results_dict["module_to_decompose"]  = args.module_to_decompose
     if logger is not None:
         logger.info(
             f"\nDecomposition type {args.decomposition_method}, Components/concepts shape: {concepts.shape}, Activations shape: {activations.shape}"
@@ -60,6 +62,7 @@ def decompose_and_ground_activations(
             args=args,
         )
         grounding_dict["analysis_model"] = decomposition_model
+        grounding_dict["target_token"] = args.token_of_interest
         results_dict.update(grounding_dict)
     return results_dict
 

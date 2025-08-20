@@ -6,7 +6,11 @@ import numpy as np
 from torch.utils.data import Dataset
 
 from datasets.constants import WORDS
-from models.constants import TASK_PROMPTS
+from models.constants import TASK_PROMPTS, PAINTING_STYLES
+
+import nltk
+import re
+import glob
 
 __all__ = ["COCODataset"]
 
@@ -212,6 +216,97 @@ class COCODataset(ImageTextDataset):
 
         self.data = data
 
+
+class PaintingFormDataset(ImageTextDataset):
+    def create_dataset(
+        self,
+    ) -> None:
+        annotation_path = os.path.join(self.data_dir, self.annotation_file)
+        with open(annotation_path) as f:
+            karpathy_data = json.load(f)
+
+        data = []
+        for key, val in karpathy_data.items():
+            
+            if isinstance(val, list):
+                image_desc = val[0]
+            else:
+                image_desc = val
+            
+            image_path = key
+
+
+            img_id = image_path.split("/")[-1]
+
+            instruction = TASK_PROMPTS.get(self.prompt_template, {}).get(
+                "ShortCaptioning", "An image of "
+            )
+
+           
+
+            targets = nltk.sent_tokenize(image_desc)
+
+            response = re.findall(r"([^.]*?style[^.]*\.)", image_desc)
+
+            if len(response) == 0:
+                continue
+
+            data.append({
+                "img_id": img_id,
+                "instruction": instruction,
+                "response": image_desc,
+                "image": image_path,
+                "targets": "$$".join(targets),
+            })
+
+        
+        if self.dataset_size > 0:
+            data = self.rng.choice(data, size=self.dataset_size, replace=False)
+
+        self.data = data
+
+
+class WikiArtDataset(ImageTextDataset):
+    
+    def create_dataset(
+        self,
+    ) -> None:
+        
+        data = []
+        for image_path in glob.glob(self.data_dir + '/*/*.jpg'):
+
+            img_id = image_path.split("/")[-1].replace('.jpg', '')
+            img_label = image_path.split("/")[-2]
+
+            if img_label not in PAINTING_STYLES:
+                continue
+
+            instruction = TASK_PROMPTS.get(self.prompt_template, {}).get(
+                "WikiArtPrompt", "What art style does this painting belongs to?"
+            )
+
+            data.append({
+                "img_id": img_id,
+                "instruction": instruction,
+                "response": img_label,
+                "image": image_path,
+                "targets": img_label,
+            })
+
+        
+        if self.dataset_size > 0:
+            all_data = []
+            for s in PAINTING_STYLES:
+                s_data = [x for x in data if x['targets'] == s]
+                s_data = self.rng.choice(data, size=self.dataset_size, replace=False)
+                all_data.append(s_data)
+                print("{} ===>{}", s, len(s_data))
+            data = [x for s_data in all_data for x in s_data]
+            #data = self.rng.choice(data, size=self.dataset_size, replace=False)
+
+        
+
+        self.data = data
 
 class VQAv2Dataset(ImageTextDataset):
     def create_dataset(
