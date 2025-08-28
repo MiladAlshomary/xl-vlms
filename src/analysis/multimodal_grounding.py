@@ -24,8 +24,8 @@ def concept_text_grounding(
     tokenizer: Callable = None,
     num_top_tokens: int = 15,
     gist_file_path: str = GIST_FILE_PATH,
-    pre_num_top_tokens: int = 50,
-    keep_unique_words: bool = False,
+    pre_num_top_tokens: int = 100,
+    keep_unique_words: bool = True,
     predefined_phrases: list = [],
 ) -> List[List[str]]:
     # components are of shape n_comp x feature_dim

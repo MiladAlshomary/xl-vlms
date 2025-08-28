@@ -12,6 +12,7 @@ SUPPORTED_MODELS = [
     "HuggingFaceM4/idefics2-8b",
     "allenai/Molmo-7B-D-0924",
     "ShareGPT4V",
+    "GalleryGPT"
 ]
 
 
@@ -59,6 +60,11 @@ def get_model_class(
     elif "ShareGPT4V" in model_name_or_path:
         from models.sharegpt4v import ShareGPT4v
         model_class = ShareGPT4v(model_name_or_path=model_name_or_path,
+                                processor_name=processor_name,
+                                local_files_only=args.local_files_only)
+    elif "GalleryGPT" in model_name_or_path:
+        from models.GalleryGPT import GalleryGPT
+        model_class = GalleryGPT(model_name_or_path=model_name_or_path,
                                 processor_name=processor_name,
                                 local_files_only=args.local_files_only)
 

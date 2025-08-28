@@ -38,7 +38,7 @@ class LLaVA(ImageTextModel):
     ) -> None:
 
         self.processor_ = AutoProcessor.from_pretrained(
-            self.processor_name, local_files_only=self.local_files_only
+            self.processor_name, local_files_only=self.local_files_only, use_fast=False,
         )
         self.tokenizer_ = self.processor_.tokenizer
 
