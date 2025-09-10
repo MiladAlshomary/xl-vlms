@@ -5,6 +5,7 @@ from typing import Any, Callable, Tuple
 from torch.utils.data import DataLoader, Subset
 
 from datasets.image_text_dataset import COCODataset, VQAv2Dataset, PaintingFormDataset, WikiArtDataset
+from models.constants import STYLE_VOCABULARY
 
 __all__ = ["get_dataset_loader"]
 
@@ -62,8 +63,9 @@ def get_dataset_loader(
         logger.info(f"Successfully loaded {dataset_name}")
 
     if args.select_token_of_interest_samples:
+        tokens_of_interest = args.token_of_interest if args.token_of_interest is not None else STYLE_VOCABULARY
         token_of_interest_indices = dataset.token_of_interest_idx_extractor(
-            token_of_interest=args.token_of_interest,
+            token_of_interest=tokens_of_interest,
             token_of_interest_key=args.token_of_interest_key,
             allow_different_variations=args.allow_different_variations_of_token_of_interest,
             token_of_interest_class=args.token_of_interest_class,

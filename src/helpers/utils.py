@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 import metrics
 from datasets.constants import WORDS
+from models.constants import STYLE_VOCABULARY
 
 __all__ = [
     "register_hooks",
@@ -425,24 +426,26 @@ def register_hooks(
         )
     elif "save_hidden_states_for_token_of_interest" == hook_name:
         # Save the hidden states of tokens between start and end index
-        token_of_interest = args.token_of_interest
+        tokens_of_interest = args.token_of_interest if args.token_of_interest is not None else STYLE_VOCABULARY
 
         # Get index in tokenizer vocabulary for token of interest
         # Some tokenizers encode/decode space along with token, so include index of whitespace + token_of_interest
-        tokens_of_interest = set(
-            [
+        expanded_tokens = [[
                 token_of_interest,
                 token_of_interest.capitalize(),
                 token_of_interest.lower(),
                 " " + token_of_interest,
-            ]
-        )
+            ] for token_of_interest in tokens_of_interest]
+        expanded_tokens = [x for l in expanded_tokens for x in l]
+        
+        print('hooking to tokens of interest:', expanded_tokens)
+       
         token_of_interest_idx = args.token_of_interest_idx
         if token_of_interest_idx is None:
             token_of_interest_idx = torch.tensor(
                 [
                     tokenizer.encode(tok, add_special_tokens=False)[0]
-                    for tok in tokens_of_interest
+                    for tok in expanded_tokens
                 ]
             )
         hook_function = save_hidden_states

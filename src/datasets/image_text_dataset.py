@@ -282,7 +282,7 @@ class WikiArtDataset(ImageTextDataset):
                 continue
 
             instruction = TASK_PROMPTS.get(self.prompt_template, {}).get(
-                "WikiArtPrompt", "What art style does this painting belongs to?"
+                "WikiArtPrompt", "Perform a formal analysis of this painting"
             )
 
             data.append({

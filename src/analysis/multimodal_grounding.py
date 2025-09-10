@@ -116,7 +116,7 @@ def get_multimodal_grounding(
             tokenizer=tokenizer,
             num_top_tokens=num_grounded_text_tokens,
             pre_num_top_tokens=args.pre_num_top_tokens,
-            predefined_phrases=PAINTING_STYLES_DICT[args.token_of_interest]['predefined_keywords']
+            predefined_phrases=PAINTING_STYLES_DICT[args.token_of_interest]['predefined_keywords'] if args.token_of_interest != None else []
         )
         if logger is not None:
             for i in range(len(grounded_words)):

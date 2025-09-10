@@ -54,11 +54,18 @@ def inference(
             if inputs["input_ids"].ndim > 1
             else inputs["input_ids"].shape[0]
         )
+
+        #MA: I hard coded input_len to be 0 because otherwise we are trimming the output tokens
+        input_len = 0
+
         item["model_generated_output"] = out[:, input_len:]
         item["gt_label"] = item['targets']
         item["model_predictions"] = model_class.get_tokenizer().batch_decode(
             out[:, input_len:], skip_special_tokens=True
         )
+
+        #print(item['model_predictions'])
+        
 
         if hook_return_functions is not None:
             for func in hook_return_functions:
