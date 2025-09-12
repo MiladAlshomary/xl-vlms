@@ -421,4 +421,12 @@ def get_arguments():
         help="Path to the file with ids of samples to be filtered.",
     )
 
+    # Style & Content Disentanglement Arguments
+    parser.add_argument(
+        "--disentange_style_first",
+        action="store_true",
+        default=False,
+        help="Perform style and content disentanglement first",
+    )
+
     return parser.parse_args()

@@ -12,6 +12,8 @@ from analysis.model_steering import get_steering_vector
 from analysis.utils import (get_matched_token_of_interest_mask,
                             get_token_of_interest_features)
 
+from analysis.disentangle_latent_space import *
+
 __all__ = ["load_features", "analyse_features"]
 
 SUPPORTED_ANALYSIS = [
@@ -86,7 +88,6 @@ def load_analysis(
     return analysis_data_, meta_data
 
 
-@torch.no_grad()
 def analyse_features(
     analysis_name: str = "decompose_activations",
     model_class: Callable = None,
@@ -115,79 +116,87 @@ def analyse_features(
             args=args,
         )
 
-    num_concepts = [int(n) for n in args.num_concepts] if args.num_concepts else None
-    results_dict = {}
-    if "decompose_activations" in analysis_name:
-        results_dict = decompose_and_ground_activations(
-            features,
-            metadata,
-            analysis_name=analysis_name,
-            model_class=model_class,
-            logger=logger,
-            args=args,
-        )
-    elif "concept_dictionary_evaluation" in analysis_name:
-        results_dict = metrics.concept_dictionary_evaluation(
-            metric_name=analysis_name,
-            features=features,
-            metadata=metadata,
-            model_class=model_class,
-            concepts_decomposition_path=args.analysis_saving_path,
-            logger=logger,
-            args=args,
-            device=device,
-        )
-    elif "steering_vector" in analysis_name:
-        get_steering_vector(
-            features=features,
-            steering_method=args.steering_method,
-            base_features_key=args.base_features_key,
-            num_concepts=num_concepts,
-            save_dir=args.save_dir,
-            save_name=args.save_filename,
-            logger=logger,
-            args=args,
-        )
+    if args.disentange_style_first:
+        gt_style_labels = [l[0][0] for l in zip(list(metadata.items())[0][1]['gt_label'], list(metadata.items())[0][1]['token_of_interest_mask']) if l[1]]
+        features = list(features.items())[0][1]
+        heads, decoder, style_clf = train_latent_disentanglement(features, gt_style_labels)
 
-    elif "analyse_clusters" in analysis_name:
+        features = heads[1]
 
-        # Load analysis data for origin model if the path is provided, else pass None
-        if args.origin_model_analysis_path:
-            analysis_data_original, meta_data_original_analysis = load_analysis(
-                analysis_path=args.origin_model_analysis_path,
-                analysis_keys=[
-                    "image_grounding_paths",
-                    "text_grounding",
-                    "concepts",
-                    "activations",
-                ],
+    with torch.no_grad():
+        num_concepts = [int(n) for n in args.num_concepts] if args.num_concepts else None
+        results_dict = {}
+        if "decompose_activations" in analysis_name:
+            results_dict = decompose_and_ground_activations(
+                features,
+                metadata,
+                analysis_name=analysis_name,
+                model_class=model_class,
+                logger=logger,
                 args=args,
             )
+        elif "concept_dictionary_evaluation" in analysis_name:
+            results_dict = metrics.concept_dictionary_evaluation(
+                metric_name=analysis_name,
+                features=features,
+                metadata=metadata,
+                model_class=model_class,
+                concepts_decomposition_path=args.analysis_saving_path,
+                logger=logger,
+                args=args,
+                device=device,
+            )
+        elif "steering_vector" in analysis_name:
+            get_steering_vector(
+                features=features,
+                steering_method=args.steering_method,
+                base_features_key=args.base_features_key,
+                num_concepts=num_concepts,
+                save_dir=args.save_dir,
+                save_name=args.save_filename,
+                logger=logger,
+                args=args,
+            )
+
+        elif "analyse_clusters" in analysis_name:
+
+            # Load analysis data for origin model if the path is provided, else pass None
+            if args.origin_model_analysis_path:
+                analysis_data_original, meta_data_original_analysis = load_analysis(
+                    analysis_path=args.origin_model_analysis_path,
+                    analysis_keys=[
+                        "image_grounding_paths",
+                        "text_grounding",
+                        "concepts",
+                        "activations",
+                    ],
+                    args=args,
+                )
+            else:
+                analysis_data_original, meta_data_original_analysis = None, None
+
+            analyse_clusters(
+                features=features,
+                metadatas=metadatas,
+                analysis_data_original=analysis_data_original,
+                model_class=model_class,
+                analysis_name=analysis_name,
+                num_concepts=num_concepts[0],
+                save_analysis=args.save_analysis,
+                save_dir=args.save_dir,
+                save_name=args.save_filename,
+                logger=logger,
+                args=args,
+            )
+
         else:
-            analysis_data_original, meta_data_original_analysis = None, None
-
-        analyse_clusters(
-            features=features,
-            metadatas=metadatas,
-            analysis_data_original=analysis_data_original,
-            model_class=model_class,
-            analysis_name=analysis_name,
-            num_concepts=num_concepts[0],
-            save_analysis=args.save_analysis,
-            save_dir=args.save_dir,
-            save_name=args.save_filename,
-            logger=logger,
-            args=args,
-        )
-
-    else:
-        raise NotImplementedError(
-            f"Only the following analysis are supported: {SUPPORTED_ANALYSIS}"
-        )
-    if results_dict:
-        file_name = os.path.join(
-            args.save_dir, f"{analysis_name}_{args.save_filename}.pth"
-        )
-        torch.save(results_dict, file_name)
-        if logger is not None:
-            logger.info(f"Saving analysis results to: {file_name}")
+            raise NotImplementedError(
+                f"Only the following analysis are supported: {SUPPORTED_ANALYSIS}"
+            )
+        if results_dict:
+            file_name = os.path.join(
+                args.save_dir, f"{analysis_name}_{args.save_filename}.pth"
+            )
+            torch.save(results_dict, file_name)
+            if logger is not None:
+                logger.info(f"Saving analysis results to: {file_name}")
