@@ -5,12 +5,18 @@ from typing import Any, Callable, Dict, List, Union
 import torch
 
 import metrics
+
+from datasets import get_dataset_loader
+
 from analysis.cluster_analysis import analyse_clusters
 from analysis.feature_decomposition import (decompose_and_ground_activations,
                                             get_feature_matrix)
 from analysis.model_steering import get_steering_vector
 from analysis.utils import (get_matched_token_of_interest_mask,
                             get_token_of_interest_features)
+
+from causal_analysis import compute_causal_effect
+
 
 __all__ = ["load_features", "analyse_features"]
 
@@ -147,6 +153,23 @@ def analyse_features(
             save_name=args.save_filename,
             logger=logger,
             args=args,
+        )
+
+    elif "causal_analysis" in analysis_name:
+        concept_dcomposition_results = load_analysis(
+            analysis_path=args.analysis_saving_path,
+            logger=logger,
+            args=args,
+        )
+        dl = get_dataset_loader(
+            dataset_name=args.dataset_name, logger=logger, args=args
+        )
+        compute_causal_effect(model_class=model_class, 
+                              decomposition_results=concept_dcomposition_results, 
+                              dataloader=dl, 
+                              args=args, 
+                              logger=logger, 
+                              device=device
         )
 
     elif "analyse_clusters" in analysis_name:
