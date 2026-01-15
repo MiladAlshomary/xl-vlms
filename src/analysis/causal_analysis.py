@@ -4,14 +4,30 @@ import torch
 import numpy as np
 import argparse
 from tqdm import tqdm
+from torch.utils.data import DataLoader, Dataset
 
 from analysis.feature_decomposition import *
+from models.constants import TASK_PROMPTS
+
+
+class CausalDataset(Dataset):
+    def __init__(self, image_paths, prompt):
+        self.image_paths = image_paths
+        self.prompt = prompt
+
+    def __len__(self):
+        return len(self.image_paths)
+
+    def __getitem__(self, idx):
+        return {
+            "image": self.image_paths[idx],
+            "text": self.prompt
+        }
 
 
 def compute_causal_effect(
     model_class: Any,
     decomposition_results: Dict[str, Any],
-    dataloader: Any,
     device: torch.device,
     logger: Callable = None,
     args: argparse.Namespace = None,
@@ -38,6 +54,12 @@ def compute_causal_effect(
     image_paths_ref = decomposition_results.get("image_to_info", [])
     print(len(image_paths_ref))
     path_to_idx = {path: i for i, path in enumerate(image_paths_ref.keys())}
+
+    instruction = TASK_PROMPTS.get(self.prompt_template, {}).get(
+                "WikiArtPrompt", "Perform a formal analysis of this painting"
+            )
+    dataset = CausalDataset(list(image_paths_ref.keys()), instruction)
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
 
     model = model_class.get_model()
     tokenizer = model_class.get_tokenizer()

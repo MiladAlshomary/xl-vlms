@@ -162,12 +162,9 @@ def analyse_features(
             analysis_keys=['concepts', 'activations', 'image_to_info', 'image_grounding_paths'],
             args=args,
         )
-        dl = get_dataset_loader(
-            dataset_name=args.dataset_name, logger=logger, args=args
-        )
+
         compute_causal_effect(model_class=model_class, 
                               decomposition_results=concept_dcomposition_results, 
-                              dataloader=dl, 
                               args=args, 
                               logger=logger, 
                               device=device
