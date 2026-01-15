@@ -15,7 +15,7 @@ from analysis.model_steering import get_steering_vector
 from analysis.utils import (get_matched_token_of_interest_mask,
                             get_token_of_interest_features)
 
-from causal_analysis import compute_causal_effect
+from analysis.causal_analysis import compute_causal_effect
 
 
 __all__ = ["load_features", "analyse_features"]
@@ -85,7 +85,7 @@ def load_analysis(
         analysis_data_[analysis_key] = data[analysis_key]
     if logger is not None:
         logger.info(
-            f"Loading data from {analysis_path}.\n Data size: {len(data)}, keys: {data[0].keys()}"
+            f"Loading data from {analysis_path}.\n Data size: {len(data)}"
         )
     meta_data = {k: v for k, v in data.items() if k not in analysis_keys}
 
@@ -156,9 +156,10 @@ def analyse_features(
         )
 
     elif "causal_analysis" in analysis_name:
-        concept_dcomposition_results = load_analysis(
+        concept_dcomposition_results, meta_data = load_analysis(
             analysis_path=args.analysis_saving_path,
             logger=logger,
+            analysis_keys=['concepts', 'activations', 'image_to_info', 'image_grounding_paths'],
             args=args,
         )
         dl = get_dataset_loader(

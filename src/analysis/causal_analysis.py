@@ -28,19 +28,16 @@ def compute_causal_effect(
     :param logger: Optional logger
     """
 
-    predicted_token = args['predicted_token']
+    predicted_token = args.token_of_interest
 
     concepts = decomposition_results["concepts"]
     activations = decomposition_results["activations"]
-    module_to_decompose = decomposition_results["module_to_decompose"]
+    module_to_decompose = args.module_to_decompose
 
     # Map image paths to their index in the activations matrix
-    image_paths_ref = decomposition_results.get("image_paths", [])
-    if not image_paths_ref:
-        # Fallback to keys if image_paths list is missing (less robust)
-        image_paths_ref = list(decomposition_results["image_to_info"].keys())
-    
-    path_to_idx = {path: i for i, path in enumerate(image_paths_ref)}
+    image_paths_ref = decomposition_results.get("image_to_info", [])
+    print(len(image_paths_ref))
+    path_to_idx = {path: i for i, path in enumerate(image_paths_ref.keys())}
 
     model = model_class.get_model()
     tokenizer = model_class.get_tokenizer()

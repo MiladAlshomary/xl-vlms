@@ -87,3 +87,18 @@ python src/analyse_features.py --model_name /mnt/swordfish-pool2/milad/explainab
   --decomposition_method snmf \
   --save_filename results_layers_30 \
   --save_dir /local/nlp/milad/code/xl-vlms/data/wiki-art/gallery-gpt/impress/
+
+
+## Causal analysis
+
+python src/analyse_features.py --model_name llava-hf/llava-1.5-7b-hf \
+   --dataset_name WikiArtDataset  \
+   --data_dir /mnt/swordfish-datastore/amith/corpora/wikiart \
+   --analysis_name causal_analysis \
+   --analysis_saving_path /local/nlp/milad/code/xl-vlms/data/wiki-art/impress/decompose_activations_text_grounding_image_grounding_results_layers_30.pth \
+   --features_path /local/nlp/milad/code/xl-vlms/data/wiki-art/impress/features/save_hidden_states_for_token_of_interest_llava-hf.pth \
+   --module_to_decompose language_model.model.layers.30 \
+   --token_of_interest Impressionism \
+   --save_filename causal_analysis_results_layers_30 \
+   --save_dir /mnt/swordfish-pool2/milad/code/xl-vlms/data/wiki-art/gallery-gpt/impress/ \
+   --data_size 500
