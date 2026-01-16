@@ -165,7 +165,7 @@ def analyse_features(
             args=args,
         )
 
-        compute_causal_effect(model_class=model_class, 
+        results_dict = compute_causal_effect(model_class=model_class, 
                               decomposition_results=concept_dcomposition_results,
                               dl=dl, 
                               args=args, 

@@ -10,6 +10,36 @@ from analysis.feature_decomposition import *
 from helpers.utils import setup_hooks, clear_hooks_variables, clear_forward_hooks
 
 
+def compute_activateions(outputs, model_class: Any, analysis_model: Any, module_to_decompose: str, logger: Callable = None, args: argparse.Namespace = None):
+
+    hook_return_functions, _ = setup_hooks(
+        model=model_class.model_,
+        modules_to_hook=args.modules_to_hook,
+        hook_names=args.hook_names,
+        tokenizer=model_class.get_tokenizer(),
+        logger=logger,
+        args=args,
+    )
+
+    # Compute activations using hooks
+    item = {"model_output": outputs.logits}
+    captured_data = {}
+    for func in hook_return_functions:
+        if func is not None:
+            res = func(**item)
+            if res:
+                captured_data.update(res)
+
+    hidden_state = captured_data.get(module_to_decompose, list(captured_data.values())[0] if captured_data else None)
+    hidden_state = hidden_state[args.module_to_decompose]
+    rep = hidden_state[-1].float().cpu().numpy()
+
+    sample_activations = project_representations(rep, analysis_model, args.decomposition_method)[0]
+    
+    clear_hooks_variables()
+
+    return sample_activations
+    
 
 def compute_causal_effect(
     model_class: Any,
@@ -39,15 +69,6 @@ def compute_causal_effect(
 
     args.modules_to_hook = [[module_to_decompose]]
     args.hook_names = ["save_hidden_states"]
-
-    hook_return_functions, _ = setup_hooks(
-        model=model_class.model_,
-        modules_to_hook=args.modules_to_hook,
-        hook_names=args.hook_names,
-        tokenizer=model_class.get_tokenizer(),
-        logger=logger,
-        args=args,
-    )
 
 
     model = model_class.get_model()
@@ -83,25 +104,10 @@ def compute_causal_effect(
             probs = torch.softmax(outputs.logits[0, -1, :], dim=-1)
             base_prob = probs[target_token_id].item()
 
-        # Compute activations using hooks
-        item = {"model_output": outputs.logits}
-        captured_data = {}
-        for func in hook_return_functions:
-            if func is not None:
-                res = func(**item)
-                if res:
-                    captured_data.update(res)
 
-        hidden_state = captured_data.get(module_to_decompose, list(captured_data.values())[0] if captured_data else None)
-        hidden_state = hidden_state[args.module_to_decompose]
-        rep = hidden_state[-1].float().cpu().numpy()
-
-        sample_activations = project_representations(rep, analysis_model, args.decomposition_method)[0]
-        
-        clear_hooks_variables()
+        sample_activations = compute_activateions(outputs, model_class, analysis_model, module_to_decompose, logger, args)
 
         effects = []
-
         # 2. Intervention: Remove each concept one by one
         for k in range(concepts.shape[0]):
             concept_vec = concepts[k].clone().to(device)
