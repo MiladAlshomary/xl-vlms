@@ -156,6 +156,8 @@ def analyse_features(
         )
 
     elif "causal_analysis" in analysis_name:
+        dl = get_dataset_loader(dataset_name=args.dataset_name, logger=logger, args=args)
+        
         concept_dcomposition_results, meta_data = load_analysis(
             analysis_path=args.analysis_saving_path,
             logger=logger,
@@ -164,7 +166,8 @@ def analyse_features(
         )
 
         compute_causal_effect(model_class=model_class, 
-                              decomposition_results=concept_dcomposition_results, 
+                              decomposition_results=concept_dcomposition_results,
+                              dl, 
                               args=args, 
                               logger=logger, 
                               device=device

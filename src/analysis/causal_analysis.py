@@ -7,27 +7,14 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader, Dataset
 
 from analysis.feature_decomposition import *
-from models.constants import TASK_PROMPTS
+from helpers.utils import setup_hooks, clear_hooks_variables, clear_forward_hooks
 
-
-class CausalDataset(Dataset):
-    def __init__(self, image_paths, prompt):
-        self.image_paths = image_paths
-        self.prompt = prompt
-
-    def __len__(self):
-        return len(self.image_paths)
-
-    def __getitem__(self, idx):
-        return {
-            "image": self.image_paths[idx],
-            "text": self.prompt
-        }
 
 
 def compute_causal_effect(
     model_class: Any,
     decomposition_results: Dict[str, Any],
+    dl: DataLoader,
     device: torch.device,
     logger: Callable = None,
     args: argparse.Namespace = None,
@@ -47,18 +34,21 @@ def compute_causal_effect(
     predicted_token = args.token_of_interest
 
     concepts = decomposition_results["concepts"]
-    activations = decomposition_results["activations"]
     module_to_decompose = args.module_to_decompose
 
-    # Map image paths to their index in the activations matrix
-    image_paths_ref = decomposition_results.get("image_to_info", [])
-    path_to_idx = {path: i for i, path in enumerate(image_paths_ref.keys())}
 
-    instruction = TASK_PROMPTS.get(args.prompt_template, {}).get(
-                "WikiArtPrompt", "Perform a formal analysis of this painting"
-            )
-    dataset = CausalDataset(list(image_paths_ref.keys()), instruction)
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
+    args.modules_to_hook = [[module_to_decompose]]
+    args.hook_names = ["save_hidden_states"]
+
+    hook_return_functions, _ = setup_hooks(
+        model=model_class.model_,
+        modules_to_hook=args.modules_to_hook,
+        hook_names=args.hook_names,
+        tokenizer=model_class.get_tokenizer(),
+        logger=logger,
+        args=args,
+    )
+
 
     model = model_class.get_model()
     tokenizer = model_class.get_tokenizer()
@@ -73,16 +63,10 @@ def compute_causal_effect(
 
     results = {"causal_effects": [], "base_probs": [], "image_paths": []}
 
-    for batch in tqdm(dataloader, desc="Computing Causal Effect"):
+    for batch in tqdm(dl, desc="Computing Causal Effect"):
         # Assuming batch size 1 for precise mapping
         image_path = batch["image"][0]
         text = batch["text"][0]
-
-        if image_path not in path_to_idx:
-            continue
-
-        idx = path_to_idx[image_path]
-        sample_activations = activations[idx]  # (num_concepts,)
 
         inputs = model_class.preprocessor(
             instruction=text,
@@ -98,6 +82,27 @@ def compute_causal_effect(
             # Probability of target token at the last position
             probs = torch.softmax(outputs.logits[0, -1, :], dim=-1)
             base_prob = probs[target_token_id].item()
+
+        # Compute activations using hooks
+        item = {"model_output": outputs.logits}
+        captured_data = {}
+        for func in hook_return_functions:
+            if func is not None:
+                res = func(**item)
+                if res:
+                    captured_data.update(res)
+
+        hidden_state = captured_data.get(module_to_decompose, list(captured_data.values())[0] if captured_data else None)
+        
+        if args.decomposition_extract_pos is not None:
+            rep = hidden_state[:, args.decomposition_extract_pos, :]
+        else:
+            rep = hidden_state.mean(dim=1)
+        
+        analysis_model = decomposition_results.get("analysis_model")
+        sample_activations = project_representations(rep, analysis_model, args.decomposition_method)[0]
+        
+        clear_hooks_variables()
 
         effects = []
 
@@ -148,4 +153,5 @@ def compute_causal_effect(
         results["image_paths"].append(image_path)
         results['concepts_to_style_contribution'] = np.mean(results['causal_effects'], axis=0)
 
+    clear_forward_hooks(model_class.model_)
     return results
