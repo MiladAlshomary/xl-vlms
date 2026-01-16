@@ -421,4 +421,11 @@ def get_arguments():
         help="Path to the file with ids of samples to be filtered.",
     )
 
+    parser.add_argument(
+        "--device",
+        type=str,
+        default='cpu',
+        help="device to run the task on: cpu, cuda",
+    )
+
     return parser.parse_args()

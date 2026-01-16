@@ -52,10 +52,9 @@ def compute_causal_effect(
 
     # Map image paths to their index in the activations matrix
     image_paths_ref = decomposition_results.get("image_to_info", [])
-    print(len(image_paths_ref))
     path_to_idx = {path: i for i, path in enumerate(image_paths_ref.keys())}
 
-    instruction = TASK_PROMPTS.get(self.prompt_template, {}).get(
+    instruction = TASK_PROMPTS.get(args.prompt_template, {}).get(
                 "WikiArtPrompt", "Perform a formal analysis of this painting"
             )
     dataset = CausalDataset(list(image_paths_ref.keys()), instruction)
@@ -63,6 +62,7 @@ def compute_causal_effect(
 
     model = model_class.get_model()
     tokenizer = model_class.get_tokenizer()
+    model = model.to(device)
     model.eval()
 
     # Get the ID for the predicted token

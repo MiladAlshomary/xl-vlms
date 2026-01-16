@@ -14,12 +14,11 @@ if __name__ == "__main__":
     logger = setup_logger(log_file=os.path.join(args.save_dir, f"logs.log"))
     log_args(args, logger)
 
-    device = torch.device("cpu")
 
     model_class = get_model_class(
         args.model_name_or_path,
         args.processor_name,
-        device=device,
+        device=args.device,
         logger=logger,
         args=args,
     )
@@ -28,6 +27,6 @@ if __name__ == "__main__":
         analysis_name=args.analysis_name,
         logger=logger,
         model_class=model_class,
-        device=device,
+        device=args.device,
         args=args,
     )
