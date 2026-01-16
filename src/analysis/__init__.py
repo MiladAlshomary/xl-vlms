@@ -161,13 +161,13 @@ def analyse_features(
         concept_dcomposition_results, meta_data = load_analysis(
             analysis_path=args.analysis_saving_path,
             logger=logger,
-            analysis_keys=['concepts', 'activations', 'image_to_info', 'image_grounding_paths'],
+            analysis_keys=['concepts', 'activations', 'image_to_info', 'image_grounding_paths', 'analysis_model'],
             args=args,
         )
 
         compute_causal_effect(model_class=model_class, 
                               decomposition_results=concept_dcomposition_results,
-                              dl, 
+                              dl=dl, 
                               args=args, 
                               logger=logger, 
                               device=device

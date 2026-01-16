@@ -35,7 +35,7 @@ def compute_causal_effect(
 
     concepts = decomposition_results["concepts"]
     module_to_decompose = args.module_to_decompose
-
+    analysis_model = decomposition_results.get("analysis_model")
 
     args.modules_to_hook = [[module_to_decompose]]
     args.hook_names = ["save_hidden_states"]
@@ -93,13 +93,9 @@ def compute_causal_effect(
                     captured_data.update(res)
 
         hidden_state = captured_data.get(module_to_decompose, list(captured_data.values())[0] if captured_data else None)
-        
-        if args.decomposition_extract_pos is not None:
-            rep = hidden_state[:, args.decomposition_extract_pos, :]
-        else:
-            rep = hidden_state.mean(dim=1)
-        
-        analysis_model = decomposition_results.get("analysis_model")
+        hidden_state = hidden_state[args.module_to_decompose]
+        rep = hidden_state[-1].float().cpu().numpy()
+
         sample_activations = project_representations(rep, analysis_model, args.decomposition_method)[0]
         
         clear_hooks_variables()
@@ -108,7 +104,7 @@ def compute_causal_effect(
 
         # 2. Intervention: Remove each concept one by one
         for k in range(concepts.shape[0]):
-            concept_vec = torch.tensor(concepts[k]).to(device)
+            concept_vec = concepts[k].clone().to(device)
             coeff = sample_activations[k]
             
             # To remove the concept, we subtract its contribution: -1 * coeff * vector
