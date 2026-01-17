@@ -10,16 +10,8 @@ from analysis.feature_decomposition import *
 from helpers.utils import setup_hooks, clear_hooks_variables, clear_forward_hooks
 
 
-def compute_activateions(outputs, model_class: Any, analysis_model: Any, module_to_decompose: str, logger: Callable = None, args: argparse.Namespace = None):
+def compute_activations(outputs, analysis_model: Any, module_to_decompose: str, hook_return_functions:Any, logger: Callable = None, args: argparse.Namespace = None):
 
-    hook_return_functions, _ = setup_hooks(
-        model=model_class.model_,
-        modules_to_hook=args.modules_to_hook,
-        hook_names=args.hook_names,
-        tokenizer=model_class.get_tokenizer(),
-        logger=logger,
-        args=args,
-    )
 
     # Compute activations using hooks
     item = {"model_output": outputs.logits}
@@ -70,6 +62,14 @@ def compute_causal_effect(
     args.modules_to_hook = [[module_to_decompose]]
     args.hook_names = ["save_hidden_states"]
 
+    hook_return_functions, _ = setup_hooks(
+        model=model_class.model_,
+        modules_to_hook=args.modules_to_hook,
+        hook_names=args.hook_names,
+        tokenizer=model_class.get_tokenizer(),
+        logger=logger,
+        args=args,
+    )
 
     model = model_class.get_model()
     tokenizer = model_class.get_tokenizer()
@@ -105,7 +105,7 @@ def compute_causal_effect(
             base_prob = probs[target_token_id].item()
 
 
-        sample_activations = compute_activateions(outputs, model_class, analysis_model, module_to_decompose, logger, args)
+        sample_activations = compute_activations(outputs, analysis_model, module_to_decompose, hook_return_functions, logger, args)
 
         effects = []
         # 2. Intervention: Remove each concept one by one
